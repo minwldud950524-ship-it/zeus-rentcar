@@ -156,6 +156,35 @@
     .service-item h4 { font-family: var(--serif-kr); font-weight: 600; font-size: 17px; margin-bottom: 8px; }
     .service-item p { color: var(--muted); font-size: 13px; }
 
+    /* Gallery */
+    .gallery { border-top: 1px solid var(--line); }
+    .gallery-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .g-item {
+      position: relative; aspect-ratio: 4 / 3; overflow: hidden; cursor: pointer;
+      border: 1px solid var(--line); background: var(--bg-2);
+    }
+    .g-item:first-child { grid-column: span 2; grid-row: span 2; }
+    .g-item img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform .8s ease; }
+    .g-item:hover img { transform: scale(1.05); }
+    .g-item.empty { cursor: default; display: grid; place-items: center; }
+    .g-item.empty img { display: none; }
+    .g-empty { display: none; text-align: center; color: var(--muted); font-size: 12px; letter-spacing: .15em; }
+    .g-item.empty .g-empty { display: block; }
+    .g-empty strong { display: block; font-family: var(--serif-en); color: var(--gold); font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+    .lightbox {
+      position: fixed; inset: 0; z-index: 100; background: rgba(5,5,7,.94);
+      display: none; align-items: center; justify-content: center; padding: 60px 70px;
+    }
+    .lightbox.open { display: flex; }
+    .lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border: 1px solid var(--line); }
+    .lb-btn { position: absolute; background: none; border: none; color: var(--gold-soft); font-size: 40px; cursor: pointer; padding: 10px 16px; }
+    .lb-close { top: 14px; right: 18px; font-size: 26px; }
+    .lb-prev { left: 10px; top: 50%; transform: translateY(-50%); }
+    .lb-next { right: 10px; top: 50%; transform: translateY(-50%); }
+    .lb-count { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); font-family: var(--serif-en); color: var(--muted); letter-spacing: .3em; font-size: 13px; }
+    @media (max-width: 960px) { .gallery-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 520px) { .lightbox { padding: 60px 16px; } }
+
     /* Review */
     .review { border-top: 1px solid var(--line); }
     .reviews { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
@@ -229,6 +258,7 @@
           <li><a href="#about">ABOUT</a></li>
           <li><a href="#vehicle">VEHICLE</a></li>
           <li><a href="#service">SERVICE</a></li>
+          <li class="keep"><a href="#gallery">GALLERY</a></li>
           <li class="keep"><a href="#review">이용 후기</a></li>
           <li><a href="#contact" class="nav-cta">예약 문의</a></li>
         </ul>
@@ -393,6 +423,27 @@
     </div>
   </section>
 
+  <!-- Gallery: gallery 폴더에 1.jpg ~ 13.jpg 를 넣으면 자동으로 표시됩니다 -->
+  <section class="gallery" id="gallery">
+    <div class="wrap">
+      <div class="sec-head reveal">
+        <span class="eyebrow">Gallery</span>
+        <h2>갤러리</h2>
+        <p>특장 카니발 하이리무진의 실내외를 사진으로 만나보세요.</p>
+        <div class="divider"></div>
+      </div>
+      <div class="gallery-grid reveal" id="galleryGrid"></div>
+    </div>
+  </section>
+
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="lb-btn lb-close" aria-label="닫기">✕</button>
+    <button class="lb-btn lb-prev" aria-label="이전">‹</button>
+    <img alt="">
+    <button class="lb-btn lb-next" aria-label="다음">›</button>
+    <div class="lb-count"></div>
+  </div>
+
   <!-- Review (예시 문구 - 실제 고객 후기로 교체하세요) -->
   <section class="review" id="review">
     <div class="wrap">
@@ -459,6 +510,44 @@
     const header = document.getElementById('header');
     window.addEventListener('scroll', () => {
       header.classList.toggle('scrolled', window.scrollY > 40);
+    });
+
+    // 갤러리: gallery/1.jpg ~ gallery/13.jpg (사진이 없으면 빈 칸 표시)
+    const GALLERY_COUNT = 13;
+    const grid = document.getElementById('galleryGrid');
+    const photos = [];
+    for (let i = 1; i <= GALLERY_COUNT; i++) {
+      const no = String(i).padStart(2, '0');
+      const item = document.createElement('div');
+      item.className = 'g-item';
+      item.innerHTML = `<img src="gallery/${i}.jpg" alt="차량 사진 ${i}" loading="lazy">
+        <div class="g-empty"><strong>${no}</strong>PHOTO</div>`;
+      const img = item.querySelector('img');
+      img.onerror = () => item.classList.add('empty');
+      item.addEventListener('click', () => { if (!item.classList.contains('empty')) openLb(img); });
+      photos.push(img);
+      grid.appendChild(item);
+    }
+    const lb = document.getElementById('lightbox');
+    const lbImg = lb.querySelector('img');
+    let cur = 0;
+    const shown = () => photos.filter(p => !p.parentElement.classList.contains('empty'));
+    function showLb() {
+      const list = shown();
+      lbImg.src = list[cur].src;
+      lb.querySelector('.lb-count').textContent = `${cur + 1} / ${list.length}`;
+    }
+    function openLb(img) { cur = shown().indexOf(img); showLb(); lb.classList.add('open'); }
+    function step(d) { const n = shown().length; cur = (cur + d + n) % n; showLb(); }
+    lb.querySelector('.lb-close').onclick = () => lb.classList.remove('open');
+    lb.querySelector('.lb-prev').onclick = e => { e.stopPropagation(); step(-1); };
+    lb.querySelector('.lb-next').onclick = e => { e.stopPropagation(); step(1); };
+    lb.addEventListener('click', e => { if (e.target === lb) lb.classList.remove('open'); });
+    document.addEventListener('keydown', e => {
+      if (!lb.classList.contains('open')) return;
+      if (e.key === 'Escape') lb.classList.remove('open');
+      if (e.key === 'ArrowLeft') step(-1);
+      if (e.key === 'ArrowRight') step(1);
     });
 
     // 메뉴 클릭 시 해당 섹션으로 부드럽게 스크롤
